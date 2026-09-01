@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# OS / Editor Files
+.DS_Store
+*.log
+
+# Docker data
+pgdata/

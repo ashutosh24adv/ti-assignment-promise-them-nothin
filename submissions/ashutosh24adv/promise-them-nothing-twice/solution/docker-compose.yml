@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: relayapi_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: relayapi
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d relayapi"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  node1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: relayapi_node1
+    environment:
+      NODE_NAME: node1
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/relayapi
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  node2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: relayapi_node2
+    environment:
+      NODE_NAME: node2
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/relayapi
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  node3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: relayapi_node3
+    environment:
+      NODE_NAME: node3
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/relayapi
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  lb:
+    image: nginx:alpine
+    container_name: relayapi_lb
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - node1
+      - node2
+      - node3
+    restart: unless-stopped
+
+volumes:
+  pgdata:
