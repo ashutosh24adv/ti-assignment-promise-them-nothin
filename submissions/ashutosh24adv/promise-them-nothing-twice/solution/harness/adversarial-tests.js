@@ -25,7 +25,8 @@ function sendRequest(customerId, endpoint = '/api/v1/ping') {
       headers['X-Customer-Id'] = customerId;
     }
 
-    const req = http.request(
+    // Test harness sending test requests to local HTTP load balancer
+    const req = http.request( // nosemgrep: problem-based-packs.insecure-transport.js-node.http-request.http-request, problem-based-packs.insecure-transport.js-node.using-http-server.using-http-server
       {
         hostname: parsedUrl.hostname,
         port: parsedUrl.port || 80,

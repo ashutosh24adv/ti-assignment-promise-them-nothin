@@ -6,8 +6,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production || npm install --omit=dev
 
-# Copy source code
+# Copy source code and ensure non-root file ownership
 COPY src/ ./src/
+RUN chown -R node:node /app
+
+USER node
 
 EXPOSE 3000
 

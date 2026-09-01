@@ -19,7 +19,8 @@ const parsedUrl = new URL(BASE_URL);
 function sendRequest(customerId, endpoint = '/api/v1/ping') {
   return new Promise((resolve) => {
     const startTime = Date.now();
-    const req = http.request(
+    // Test harness sending test requests to local HTTP load balancer
+    const req = http.request( // nosemgrep: problem-based-packs.insecure-transport.js-node.http-request.http-request, problem-based-packs.insecure-transport.js-node.using-http-server.using-http-server
       {
         hostname: parsedUrl.hostname,
         port: parsedUrl.port || 80,
@@ -97,16 +98,24 @@ async function checkHealth(maxAttempts = 10, delayMs = 1500) {
 }
 
 /**
- * Synchronizes execution with a clean UTC minute window to avoid boundary rollover.
+ * Synchronizes execution with a clean UTC minute window to avoid boundary rollover or double-runs.
  */
-async function syncToCleanMinuteWindow(minBufferSeconds = 15) {
+async function syncToCleanMinuteWindow(minBufferSeconds = 20) {
   const now = new Date();
   const secondsIntoMinute = now.getUTCSeconds() + now.getUTCMilliseconds() / 1000;
   const remainingSeconds = 60 - secondsIntoMinute;
 
-  if (remainingSeconds < minBufferSeconds) {
-    const waitMs = Math.ceil(remainingSeconds * 1000) + 200;
-    console.log(`[Harness] Only ${remainingSeconds.toFixed(1)}s left in current UTC minute window.`);
+  // Probe customer_a to see if current minute window was already used by another test run
+  const probe = await sendRequest('customer_a');
+  const alreadyUsed = probe.status === 429 || (probe.body && probe.body.requestCount > 50);
+
+  if (remainingSeconds < minBufferSeconds || alreadyUsed) {
+    const waitMs = Math.ceil(remainingSeconds * 1000) + 300;
+    if (alreadyUsed) {
+      console.log('[Harness] Current minute window was already exhausted by a previous test run.');
+    } else {
+      console.log(`[Harness] Only ${remainingSeconds.toFixed(1)}s left in current UTC minute window.`);
+    }
     console.log(`[Harness] Waiting ${(waitMs / 1000).toFixed(1)}s for next UTC minute to ensure test runs inside a single window...`);
     await new Promise((r) => setTimeout(r, waitMs));
     console.log(`[Harness] Synchronized to fresh minute window: ${new Date().toISOString()}\n`);

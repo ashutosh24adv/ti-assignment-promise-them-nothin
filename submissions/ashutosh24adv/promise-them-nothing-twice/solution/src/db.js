@@ -10,7 +10,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('[PostgreSQL Pool Error]', err.message);
+  console.error('[PostgreSQL Pool Error]: %s', err.message);
 });
 
 /**
@@ -39,7 +39,7 @@ async function initDb(retries = 5, delayMs = 2000) {
         `);
         
         await client.query('COMMIT');
-        console.log(`[Database] Schema initialized successfully.`);
+        console.log('[Database] Schema initialized successfully.');
         return;
       } catch (err) {
         await client.query('ROLLBACK');
@@ -48,7 +48,7 @@ async function initDb(retries = 5, delayMs = 2000) {
         client.release();
       }
     } catch (err) {
-      console.warn(`[Database] Initialization attempt ${attempt}/${retries} failed: ${err.message}`);
+      console.warn('[Database] Initialization attempt %d/%d failed: %s', attempt, retries, err.message);
       if (attempt === retries) {
         throw err;
       }

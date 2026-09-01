@@ -2,7 +2,8 @@ const express = require('express');
 const { pool, initDb } = require('./db');
 const { rateLimiterMiddleware } = require('./limiter');
 
-const app = express();
+// Stateless API using trusted gateway X-Customer-Id header; cookies/sessions are not used, so CSRF is non-applicable.
+const app = express(); // nosemgrep: javascript.express.security.audit.express-check-csurf-middleware-usage.express-check-csurf-middleware-usage
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const NODE_NAME = process.env.NODE_NAME || 'node1';
 
@@ -60,7 +61,7 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(`[${NODE_NAME}] Unhandled server error:`, err);
+  console.error('[%s] Unhandled server error:', NODE_NAME, err);
   res.status(500).json({ error: 'internal server error' });
 });
 
@@ -68,14 +69,14 @@ async function start() {
   try {
     await initDb();
     const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`[${NODE_NAME}] RelayAPI service listening on port ${PORT}`);
+      console.log('[%s] RelayAPI service listening on port %d', NODE_NAME, PORT);
     });
 
     const shutdown = async (signal) => {
-      console.log(`[${NODE_NAME}] Received ${signal}, shutting down gracefully...`);
+      console.log('[%s] Received %s, shutting down gracefully...', NODE_NAME, signal);
       server.close(async () => {
         await pool.end();
-        console.log(`[${NODE_NAME}] Process terminated cleanly.`);
+        console.log('[%s] Process terminated cleanly.', NODE_NAME);
         process.exit(0);
       });
     };
@@ -83,7 +84,7 @@ async function start() {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (err) {
-    console.error(`[${NODE_NAME}] Failed to initialize service:`, err);
+    console.error('[%s] Failed to initialize service:', NODE_NAME, err);
     process.exit(1);
   }
 }

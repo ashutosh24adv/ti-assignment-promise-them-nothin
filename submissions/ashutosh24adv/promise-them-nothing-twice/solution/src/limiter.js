@@ -104,7 +104,7 @@ async function rateLimiterMiddleware(req, res, next) {
       });
     }
   } catch (err) {
-    console.error(`[RateLimiter] Database error for customer '${customerId}':`, err.message);
+    console.error('[RateLimiter] Database error for customer %s:', customerId, err.message);
 
     // Fail-closed: Return 503 rather than allowing unmetered quota breaches
     res.setHeader('Retry-After', '5');
